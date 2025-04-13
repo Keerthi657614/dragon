@@ -41,7 +41,8 @@
                 <div class="card p-4 mt-5">
                     <h1 class="text-center mb-4" style="color: #ff1493;">Prediction Result</h1>
                     <div class="text-center mb-4">
-                        <img src="/static/uploads/{{ filename }}" alt="Uploaded Image" class="img-preview" style="max-width: 100%; height: auto; max-height: 400px;">
+                        <!-- Dynamically show the image -->
+                        <img src="{{ url_for('predict') }}" alt="Uploaded Image" class="img-preview" style="max-width: 100%; height: auto; max-height: 400px;">
                     </div>
                     <div class="text-center">
                         <h3>Prediction: <span class="prediction-text">{{ prediction }}</span></h3>
