@@ -8,18 +8,12 @@ from tensorflow.keras.preprocessing import image
 from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
 from tensorflow.keras.models import Model
 import numpy as np
+import tempfile
 
 # Flask app setup
 app = Flask(__name__, template_folder='templates')
 app.secret_key = "supersecretkey"
-UPLOAD_FOLDER = 'static/uploads/'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# Ensure necessary directories exist
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs('templates', exist_ok=True)
-os.makedirs('static', exist_ok=True)
 
 # Google Drive Model Download Setup
 MODEL_PATH = "inception_model.h5"
@@ -94,22 +88,25 @@ def predict():
     
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
 
-        # Preprocess and predict
-        img_array = preprocess_image(file_path)
-        prediction = model.predict(img_array)[0][0]
-        label = "Fresh" if prediction > 0.5 else "Defect"
-        confidence = prediction if prediction > 0.5 else 1 - prediction
+        # Save the file temporarily using tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+            file.save(temp_file.name)
+            file_path = temp_file.name  # The temporary file path
 
-        return render_template('result.html', 
-                               filename=filename, 
-                               prediction=label, 
-                               confidence=f"{confidence:.4f}")
+            # Preprocess and predict
+            img_array = preprocess_image(file_path)
+            prediction = model.predict(img_array)[0][0]
+            label = "Fresh" if prediction > 0.5 else "Defect"
+            confidence = prediction if prediction > 0.5 else 1 - prediction
+
+            return render_template('result.html', 
+                                   filename=filename, 
+                                   prediction=label, 
+                                   confidence=f"{confidence:.4f}")
     else:
         flash('Allowed file types are png, jpg, jpeg')
         return redirect(request.url)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
