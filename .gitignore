@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+.Python
+env/
+venv/
+
+# Ignore all .h5 files except inception_model.h5
+*.h5
+!inception_model.h5
+
+# Ignore uploaded static files but allow the inception_model.h5 file
+!static/uploads/*
+!static/uploads/inception_model.h5
+
+# Ignore Vercel configuration
+.vercel
