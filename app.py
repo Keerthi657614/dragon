@@ -1,6 +1,6 @@
 import os
 import gdown  # Install using: pip install gdown
-from flask import Flask, request, render_template, flash, redirect, url_for
+from flask import Flask, request, render_template, flash, redirect, url_for, send_file
 from werkzeug.utils import secure_filename
 import tensorflow as tf
 from tensorflow.keras.applications.inception_v3 import InceptionV3, preprocess_input
@@ -13,7 +13,12 @@ import tempfile
 # Flask app setup
 app = Flask(__name__, template_folder='templates')
 app.secret_key = "supersecretkey"
+UPLOAD_FOLDER = 'static/uploads/'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Ensure necessary directories exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Google Drive Model Download Setup
 MODEL_PATH = "inception_model.h5"
@@ -100,10 +105,12 @@ def predict():
             label = "Fresh" if prediction > 0.5 else "Defect"
             confidence = prediction if prediction > 0.5 else 1 - prediction
 
+            # Serve the image dynamically and display prediction
             return render_template('result.html', 
                                    filename=filename, 
                                    prediction=label, 
-                                   confidence=f"{confidence:.4f}")
+                                   confidence=f"{confidence:.4f}", 
+                                   image_path=file_path)
     else:
         flash('Allowed file types are png, jpg, jpeg')
         return redirect(request.url)
