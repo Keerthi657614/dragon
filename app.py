@@ -1,6 +1,6 @@
 import os
 import gdown  # Install using: pip install gdown
-from flask import Flask, request, render_template, flash, redirect, url_for, send_file
+from flask import Flask, request, render_template, flash, redirect, send_from_directory
 from werkzeug.utils import secure_filename
 import tensorflow as tf
 from tensorflow.keras.applications.inception_v3 import InceptionV3, preprocess_input
@@ -15,10 +15,13 @@ app = Flask(__name__, template_folder='templates')
 app.secret_key = "supersecretkey"
 UPLOAD_FOLDER = 'static/uploads/'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+TEMP_FOLDER = 'temp_images'  # Directory for temporarily storing images
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['TEMP_FOLDER'] = TEMP_FOLDER
 
 # Ensure necessary directories exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(TEMP_FOLDER, exist_ok=True)
 
 # Google Drive Model Download Setup
 MODEL_PATH = "inception_model.h5"
@@ -95,25 +98,29 @@ def predict():
         filename = secure_filename(file.filename)
 
         # Save the file temporarily using tempfile
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
-            file.save(temp_file.name)
-            file_path = temp_file.name  # The temporary file path
+        filepath = os.path.join(app.config['TEMP_FOLDER'], filename)
+        file.save(filepath)
 
-            # Preprocess and predict
-            img_array = preprocess_image(file_path)
-            prediction = model.predict(img_array)[0][0]
-            label = "Fresh" if prediction > 0.5 else "Defect"
-            confidence = prediction if prediction > 0.5 else 1 - prediction
+        # Preprocess and predict
+        img_array = preprocess_image(filepath)
+        prediction = model.predict(img_array)[0][0]
+        label = "Fresh" if prediction > 0.5 else "Defect"
+        confidence = prediction if prediction > 0.5 else 1 - prediction
 
-            # Serve the image dynamically and display prediction
-            return render_template('result.html', 
-                                   filename=filename, 
-                                   prediction=label, 
-                                   confidence=f"{confidence:.4f}", 
-                                   image_path=file_path)
+        # Serve the image dynamically and display prediction
+        return render_template('result.html', 
+                               filename=filename, 
+                               prediction=label, 
+                               confidence=f"{confidence:.4f}", 
+                               image_filename=filename)
     else:
         flash('Allowed file types are png, jpg, jpeg')
         return redirect(request.url)
+
+@app.route('/temp_images/<filename>')
+def send_temp_image(filename):
+    """Serve image from the temporary folder"""
+    return send_from_directory(app.config['TEMP_FOLDER'], filename)
 
 if __name__ == '__main__':
     app.run(debug=True)
